@@ -6,6 +6,10 @@
 <title>Brainrot Shop</title>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
@@ -13,12 +17,14 @@ body {
   color: white;
 }
 
+/* NAV */
 nav {
   background: rgba(0,0,0,0.7);
   padding: 15px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  backdrop-filter: blur(10px);
 }
 
 .logo {
@@ -27,6 +33,7 @@ nav {
   color: #ff6f61;
 }
 
+/* SHOP */
 .shop-container {
   display: flex;
   flex-wrap: wrap;
@@ -42,8 +49,15 @@ nav {
   width: 220px;
   text-align: center;
   box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+  transition: 0.3s;
 }
 
+.item-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+}
+
+/* BUTTONS */
 button {
   background: #ff6f61;
   border: none;
@@ -53,32 +67,49 @@ button {
   font-weight: bold;
   cursor: pointer;
   margin: 5px;
+  transition: 0.2s;
 }
 
+button:hover {
+  transform: scale(1.05);
+}
+
+.danger {
+  background: red;
+}
+
+.secondary {
+  background: #444;
+}
+
+/* PANELS */
 .admin-panel, .orders-panel {
   display: none;
   background: rgba(255,255,255,0.05);
   margin: 20px auto;
   padding: 20px;
   border-radius: 15px;
-  max-width: 600px;
+  max-width: 700px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.5);
 }
 
+/* INPUT */
 input {
   display: block;
-  width: 90%;
+  width: 95%;
   margin: 10px auto;
-  padding: 8px;
-  border-radius: 5px;
+  padding: 10px;
+  border-radius: 8px;
   border: none;
 }
 
+/* ORDER */
 .order-item {
   border-bottom: 1px solid #ff6f61;
   padding: 10px 0;
 }
 
-/* Secret admin trigger */
+/* SECRET ADMIN */
 #secretCorner {
   position: fixed;
   bottom: 0;
@@ -87,27 +118,80 @@ input {
   height: 40px;
   cursor: pointer;
 }
+
+/* STATS */
+.stats {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.stat-box {
+  background: rgba(0,0,0,0.3);
+  padding: 10px;
+  border-radius: 10px;
+  width: 30%;
+}
+
+/* SEARCH */
+.search-bar {
+  text-align: center;
+  margin-top: 20px;
+}
+
+/* TOAST */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: black;
+  padding: 10px 20px;
+  border-radius: 10px;
+  display: none;
+}
 </style>
 </head>
 
 <body>
 
 <div id="secretCorner"></div>
+<div id="toast"></div>
 
 <nav>
   <div class="logo">Brainrot Shop</div>
   <a href="mailto:omarmahmoud0613@hotmail.com" style="color:white;text-decoration:none;">Contact</a>
 </nav>
 
+<div class="search-bar">
+  <input type="text" id="searchInput" placeholder="Search item..." oninput="renderItems()">
+</div>
+
 <!-- ADMIN PANEL -->
 <div class="admin-panel" id="adminPanel">
-  <h2>Admin Panel</h2>
+  <h2>Admin Dashboard</h2>
+
+  <div class="stats">
+    <div class="stat-box">
+      <b id="totalItems">0</b><br>Items
+    </div>
+    <div class="stat-box">
+      <b id="totalOrders">0</b><br>Orders
+    </div>
+    <div class="stat-box">
+      <b id="totalStock">0</b><br>Total Stock
+    </div>
+  </div>
+
   <input type="text" id="itemName" placeholder="Item Name">
   <input type="text" id="itemMutation" placeholder="Mutation">
   <input type="text" id="itemLevel" placeholder="Level">
   <input type="number" id="itemPrice" placeholder="Price (SAR)">
   <input type="number" id="itemStock" placeholder="Stock">
+
   <button onclick="addItem()">Add Item</button>
+  <button class="secondary" onclick="logoutAdmin()">Logout</button>
 </div>
 
 <!-- SHOP -->
@@ -121,7 +205,6 @@ input {
 
 <script>
 const adminPassword = "himynameisomar";
-
 let isAdmin = false;
 
 let items = JSON.parse(localStorage.getItem("shopItems")) || [];
@@ -129,72 +212,70 @@ let orders = JSON.parse(localStorage.getItem("shopOrders")) || [];
 
 const shopContainer = document.getElementById("shopContainer");
 const ordersList = document.getElementById("ordersList");
-const adminPanel = document.getElementById("adminPanel");
-const ordersPanel = document.getElementById("ordersPanel");
 
 function saveData() {
   localStorage.setItem("shopItems", JSON.stringify(items));
   localStorage.setItem("shopOrders", JSON.stringify(orders));
+  updateStats();
 }
 
-/* 🛒 Render Items */
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 2000);
+}
+
+/* STATS */
+function updateStats() {
+  document.getElementById("totalItems").innerText = items.length;
+  document.getElementById("totalOrders").innerText = orders.length;
+  document.getElementById("totalStock").innerText =
+    items.reduce((sum, i) => sum + i.stock, 0);
+}
+
+/* RENDER ITEMS */
 function renderItems() {
   shopContainer.innerHTML = "";
+  const search = document.getElementById("searchInput").value.toLowerCase();
 
-  if (items.length === 0) {
+  const filtered = items.filter(i =>
+    i.name.toLowerCase().includes(search)
+  );
+
+  if (filtered.length === 0) {
     shopContainer.innerHTML = "<h2>Nothing in stock<br>pls contact omarmahmoud0613@hotmail.com</h2>";
     return;
   }
 
-  items.forEach((item, index) => {
-    const div = document.createElement("div");
-    div.className = "item-card";
+  filtered.forEach((item, index) => {
+    const realIndex = items.indexOf(item);
 
-    let adminButtons = "";
+    let adminControls = "";
     if (isAdmin) {
-      adminButtons = `
-        <button onclick="deleteItem(${index})" style="background:red;">
-          Delete
-        </button>
+      adminControls = `
+        <button onclick="restockItem(${realIndex})" class="secondary">Restock</button>
+        <button onclick="editItem(${realIndex})" class="secondary">Edit</button>
+        <button onclick="deleteItem(${realIndex})" class="danger">Delete</button>
       `;
     }
 
+    const div = document.createElement("div");
+    div.className = "item-card";
     div.innerHTML = `
       <h3>${item.name}</h3>
       <p>Mutation: ${item.mutation}</p>
       <p>Level: ${item.level}</p>
       <p>Price: ${item.price} SAR</p>
       <p>Stock: ${item.stock}</p>
-      <button onclick="orderItem(${index})">Buy</button>
-      ${adminButtons}
+      <button onclick="orderItem(${realIndex})">Buy</button>
+      ${adminControls}
     `;
-
     shopContainer.appendChild(div);
   });
 }
 
-/* 📦 Render Orders */
-function renderOrders() {
-  ordersList.innerHTML = "";
-
-  orders.forEach((order, index) => {
-    const div = document.createElement("div");
-    div.className = "order-item";
-
-    div.innerHTML = `
-      <b>${order.firstName} ${order.lastName}</b><br>
-      Roblox: ${order.roblox}<br>
-      Item: ${order.name}<br>
-      Date: ${order.date}<br>
-      <button onclick="viewReceipt(${index})">Receipt</button>
-      <button onclick="deleteOrder(${index})">Delete</button>
-    `;
-
-    ordersList.appendChild(div);
-  });
-}
-
-/* ➕ Add Item */
+/* ADD ITEM */
 function addItem() {
   const name = itemName.value;
   const mutation = itemMutation.value;
@@ -203,34 +284,60 @@ function addItem() {
   const stock = itemStock.value;
 
   if (!name || !mutation || !level || !price || !stock) {
-    alert("Fill everything.");
+    toast("Fill everything.");
     return;
   }
 
-  items.push({
-    name,
-    mutation,
-    level,
-    price,
-    stock: Number(stock)
-  });
+  items.push({ name, mutation, level, price, stock: Number(stock) });
+  saveData();
+  renderItems();
+  toast("Item added ✅");
+}
+
+/* EDIT ITEM */
+function editItem(index) {
+  const item = items[index];
+
+  const name = prompt("New name:", item.name);
+  if (!name) return;
+
+  const price = prompt("New price:", item.price);
+  if (!price) return;
+
+  item.name = name;
+  item.price = price;
 
   saveData();
   renderItems();
-
-  itemName.value = "";
-  itemMutation.value = "";
-  itemLevel.value = "";
-  itemPrice.value = "";
-  itemStock.value = "";
+  toast("Item updated ✏️");
 }
 
-/* 🛍 Order */
+/* RESTOCK */
+function restockItem(index) {
+  const amount = prompt("Add stock:");
+  if (!amount) return;
+
+  items[index].stock += Number(amount);
+  saveData();
+  renderItems();
+  toast("Stock updated 📦");
+}
+
+/* DELETE ITEM */
+function deleteItem(index) {
+  if (!confirm("Delete item?")) return;
+  items.splice(index, 1);
+  saveData();
+  renderItems();
+  toast("Item deleted 🗑");
+}
+
+/* ORDER */
 function orderItem(index) {
   const item = items[index];
 
   if (item.stock <= 0) {
-    alert("Nothing in stock\npls contact omarmahmoud0613@hotmail.com");
+    toast("Out of stock ❌");
     return;
   }
 
@@ -252,80 +359,70 @@ Customer: ${firstName} ${lastName}
 Roblox: ${roblox}
 
 Item: ${item.name}
-Mutation: ${item.mutation}
-Level: ${item.level}
 Price: ${item.price} SAR
 Date: ${date}
 
-Thank you for your purchase!
 Brainrot Shop
 `;
 
-  orders.push({
-    firstName,
-    lastName,
-    roblox,
-    ...item,
-    date,
-    receipt
-  });
-
+  orders.push({ firstName, lastName, roblox, name: item.name, date, receipt });
   item.stock--;
+
   saveData();
-
-  showPrintableReceipt(receipt);
-
   renderItems();
   renderOrders();
+  showReceipt(receipt);
 }
 
-/* 🧾 Receipt */
-function showPrintableReceipt(text) {
+/* RENDER ORDERS */
+function renderOrders() {
+  if (!isAdmin) return;
+
+  ordersList.innerHTML = "";
+  orders.forEach((order, index) => {
+    const div = document.createElement("div");
+    div.className = "order-item";
+    div.innerHTML = `
+      <b>${order.firstName} ${order.lastName}</b><br>
+      Roblox: ${order.roblox}<br>
+      Item: ${order.name}<br>
+      <button onclick="showReceipt(orders[${index}].receipt)">Receipt</button>
+    `;
+    ordersList.appendChild(div);
+  });
+}
+
+/* RECEIPT */
+function showReceipt(text) {
   const win = window.open("", "_blank");
-  win.document.write(`
-    <pre style="font-size:18px;font-family:monospace;">${text}</pre>
-    <button onclick="window.print()">Print Receipt</button>
-  `);
+  win.document.write(`<pre>${text}</pre><button onclick="window.print()">Print</button>`);
   win.document.close();
 }
 
-function viewReceipt(index) {
-  showPrintableReceipt(orders[index].receipt);
-}
-
-/* 🗑 Delete Order */
-function deleteOrder(index) {
-  if (!confirm("Delete this order?")) return;
-  orders.splice(index, 1);
-  saveData();
-  renderOrders();
-}
-
-/* 🗑 Delete Item (ADMIN ONLY BUTTON) */
-function deleteItem(index) {
-  if (!isAdmin) return;
-  if (!confirm("Delete this item from stock?")) return;
-
-  items.splice(index, 1);
-  saveData();
-  renderItems();
-}
-
-/* 🕵️ Secret Admin Login */
+/* ADMIN LOGIN */
 document.getElementById("secretCorner").onclick = () => {
   const entered = prompt("Admin password:");
-
   if (entered === adminPassword) {
     isAdmin = true;
     adminPanel.style.display = "block";
     ordersPanel.style.display = "block";
-    renderItems(); // refresh buttons
-    alert("Admin unlocked 😎");
+    renderItems();
+    renderOrders();
+    toast("Admin unlocked 😎");
   } else {
-    alert("Wrong password.");
+    toast("Wrong password");
   }
 };
 
+function logoutAdmin() {
+  isAdmin = false;
+  adminPanel.style.display = "none";
+  ordersPanel.style.display = "none";
+  renderItems();
+  toast("Logged out");
+}
+
+updateStats();
 renderItems();
 renderOrders();
 </script>
